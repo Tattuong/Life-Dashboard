@@ -1,0 +1,26 @@
+{
+  "name": "DayPlanner Pro",
+  "id": "com.dayplannerpromng.dayplannerpro",
+  "version": "1.0.0",
+  "disable": 0,
+  "code": "FULL_IAP",
+  "status": "ACTIVE",
+  "msg": "IAP enabled",
+  "products": {
+    "consumable": [
+      { "id": "dpp_pack_1", "coins": 50 },
+      { "id": "dpp_pack_2", "coins": 100 },
+      { "id": "dpp_pack_3", "coins": 200 },
+      { "id": "dpp_pack_4", "coins": 350 },
+      { "id": "dpp_pack_5", "coins": 500 },
+      { "id": "dpp_pack_6", "coins": 750 },
+      { "id": "dpp_pack_7", "coins": 1000 },
+      { "id": "dpp_pack_8", "coins": 1500 },
+      { "id": "dpp_pack_9", "coins": 2200 },
+      { "id": "dpp_pack_10", "coins": 3000 }
+    ],
+    "non_consumable": [
+      { "id": "dpp_remove_ads", "type": "remove_ads" }
+    ]
+  }
+}
