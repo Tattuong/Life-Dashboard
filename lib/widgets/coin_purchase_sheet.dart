@@ -15,12 +15,14 @@ class CoinPurchaseSheet {
     final shop = context.read<ShopProvider>();
     if (shop.isBillingDisabled) return;
 
+    shop.clearPurchaseInProgress();
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => const _CoinPurchaseSheet(),
     );
+    shop.clearPurchaseInProgress();
   }
 }
 
@@ -57,7 +59,8 @@ class _CoinPurchaseSheetState extends State<_CoinPurchaseSheet> {
     final shop = _shop;
     if (shop == null) return;
 
-    if (!shop.isPurchasing && shop.lastMessage == 'coinsAdded') {
+    if (!shop.isPurchasing &&
+        (shop.lastMessage == 'coinsAdded' || shop.lastMessage == 'coinsAddedWithBonus')) {
       _closedAfterPurchase = true;
       shop.clearLastMessage();
       Navigator.of(context).pop();
@@ -119,7 +122,13 @@ class _CoinPurchaseSheetState extends State<_CoinPurchaseSheet> {
                       ],
                     ),
                   ),
-                  IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+                  IconButton(
+                    onPressed: () {
+                      shop.clearPurchaseInProgress();
+                      Navigator.pop(context);
+                    },
+                    icon: const Icon(Icons.close),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -153,16 +162,24 @@ class _CoinPurchaseSheetState extends State<_CoinPurchaseSheet> {
                 ),
               ],
               if (shop.isPurchasing) ...[
-                const SizedBox(height: 24),
-                const Center(child: CircularProgressIndicator()),
-                const SizedBox(height: 8),
-                Center(
-                  child: Text(
-                    AppStrings.t(context, 'processingPurchase'),
-                    style: const TextStyle(color: AppColors.onSurfaceVariant),
-                  ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2.4),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      AppStrings.t(context, 'processingPurchase'),
+                      style: const TextStyle(color: AppColors.onSurfaceVariant),
+                    ),
+                  ],
                 ),
-              ] else if (!shop.billing.isAvailable) ...[
+              ],
+              if (!shop.billing.isAvailable) ...[
                 const SizedBox(height: 24),
                 _StatusBanner(
                   icon: Icons.storefront_outlined,

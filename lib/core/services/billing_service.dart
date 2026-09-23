@@ -22,6 +22,7 @@ class BillingService {
   Future<void> init({
     required PurchaseCallback onPurchase,
     required VoidCallback onError,
+    VoidCallback? onCanceled,
   }) async {
     if (isInitialized) return;
 
@@ -39,9 +40,15 @@ class BillingService {
           for (final purchase in purchases) {
             if (purchase.status == PurchaseStatus.pending) continue;
 
-            if (purchase.status == PurchaseStatus.error) {
+            if (purchase.status == PurchaseStatus.canceled) {
+              onCanceled?.call();
+            } else if (purchase.status == PurchaseStatus.error) {
               lastError = purchase.error?.message ?? 'Purchase failed';
-              onError();
+              if (_isUserCanceled(purchase.error)) {
+                onCanceled?.call();
+              } else {
+                onError();
+              }
             } else if (purchase.status == PurchaseStatus.purchased ||
                 purchase.status == PurchaseStatus.restored) {
               onPurchase(purchase);
@@ -90,14 +97,33 @@ class BillingService {
 
   Future<bool> buyCoinPack(ProductDetails product) async {
     if (!isAvailable) return false;
-    final param = PurchaseParam(productDetails: product);
-    return _iap.buyConsumable(purchaseParam: param);
+    try {
+      final param = PurchaseParam(productDetails: product);
+      return await _iap.buyConsumable(purchaseParam: param);
+    } catch (e) {
+      lastError = e.toString();
+      debugPrint('buyCoinPack error: $e');
+      return false;
+    }
   }
 
   Future<bool> buyRemoveAds() async {
     if (!isAvailable || removeAdsProduct == null) return false;
-    final param = PurchaseParam(productDetails: removeAdsProduct!);
-    return _iap.buyNonConsumable(purchaseParam: param);
+    try {
+      final param = PurchaseParam(productDetails: removeAdsProduct!);
+      return await _iap.buyNonConsumable(purchaseParam: param);
+    } catch (e) {
+      lastError = e.toString();
+      debugPrint('buyRemoveAds error: $e');
+      return false;
+    }
+  }
+
+  bool _isUserCanceled(IAPError? error) {
+    if (error == null) return false;
+    final code = error.code.toLowerCase();
+    final message = error.message.toLowerCase();
+    return code.contains('cancel') || message.contains('cancel');
   }
 
   Future<void> restorePurchases() async {

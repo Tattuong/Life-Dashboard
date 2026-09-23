@@ -124,7 +124,8 @@ class ShopProvider extends ChangeNotifier {
     if (!isBillingDisabled && (Platform.isAndroid || Platform.isIOS)) {
       await _billing.init(
         onPurchase: _handlePurchase,
-        onError: () => notifyListeners(),
+        onError: _handlePurchaseFailed,
+        onCanceled: clearPurchaseInProgress,
       );
     }
 
@@ -205,34 +206,48 @@ class ShopProvider extends ChangeNotifier {
   }
 
   Future<bool> buyCoinPack(ProductDetails product) async {
-    if (isBillingDisabled || !_billing.isAvailable) return false;
+    if (isBillingDisabled || !_billing.isAvailable || _isPurchasing) return false;
     _isPurchasing = true;
     _lastMessage = null;
     notifyListeners();
-    final ok = await _billing.buyCoinPack(product);
-    if (!ok) {
-      _isPurchasing = false;
-      _lastMessage = 'purchaseFailed';
-      notifyListeners();
+    try {
+      final ok = await _billing.buyCoinPack(product);
+      if (!ok) _handlePurchaseFailed();
+      return ok;
+    } catch (_) {
+      _handlePurchaseFailed();
+      return false;
     }
-    return ok;
   }
 
   Future<bool> buyRemoveAdsViaBilling() async {
     if (isBillingDisabled || !_billing.isAvailable || _billing.removeAdsProduct == null) {
       return false;
     }
-    if (hasRemoveAds) return false;
+    if (hasRemoveAds || _isPurchasing) return false;
     _isPurchasing = true;
     _lastMessage = null;
     notifyListeners();
-    final ok = await _billing.buyRemoveAds();
-    if (!ok) {
-      _isPurchasing = false;
-      _lastMessage = 'purchaseFailed';
-      notifyListeners();
+    try {
+      final ok = await _billing.buyRemoveAds();
+      if (!ok) _handlePurchaseFailed();
+      return ok;
+    } catch (_) {
+      _handlePurchaseFailed();
+      return false;
     }
-    return ok;
+  }
+
+  void _handlePurchaseFailed() {
+    _isPurchasing = false;
+    _lastMessage = 'purchaseFailed';
+    notifyListeners();
+  }
+
+  void clearPurchaseInProgress() {
+    if (!_isPurchasing) return;
+    _isPurchasing = false;
+    notifyListeners();
   }
 
   Future<void> _handlePurchase(PurchaseDetails purchase) async {
